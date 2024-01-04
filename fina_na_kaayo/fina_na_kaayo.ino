@@ -12,6 +12,9 @@ OneWire oneWire(SENSOR_PIN);
 DallasTemperature tempSensor(&oneWire);
 
 const int PUMP_CONTROL_PIN = 3;
+int motorSpeed_one= 128;
+int motorSpeed_two= 255; 
+
 
 int relay1 = 9;
 int relay2 = 11;
@@ -195,7 +198,7 @@ void setup()
     tempSensor.begin();
 
     pinMode(PUMP_CONTROL_PIN, OUTPUT);
-    digitalWrite(PUMP_CONTROL_PIN, HIGH);
+    analogWrite(PUMP_CONTROL_PIN, motorSpeed_one);
 }
 
 void loop()
@@ -239,24 +242,34 @@ void loop()
     lcd.print("Acidity (pH): ");
     lcd.print(acidity);
 
+    lcd.clear();
+
     if (acidity > 7) {
         digitalWrite(relay1, LOW);
         digitalWrite(relay2, HIGH);
-        Serial.println("Rotating in CCW (add 2ml pH Down Solution)");  
-        delay(2000);  
+        lcd.print("adding 2ml pH Down");
+        Serial.println("Rotating in CCW (add 2ml pH Down Solution)");
+        delay(2000);
+        lcd.clear();
         digitalWrite(relay1, HIGH);
         digitalWrite(relay2, HIGH);
+        lcd.print("done!");
         Serial.println("Stopped");  
         delay(4000);
+        lcd.clear();
     } else if (acidity < 6) {
         digitalWrite(relay1, LOW);
         digitalWrite(relay2, HIGH);
+        lcd.print("adding 2ml pH Up");
         Serial.println("Rotating in CCW (add 2ml pH Up Solution)");  
-        delay(2000);  
+        delay(2000);
+        lcd.clear();
         digitalWrite(relay1, HIGH);
         digitalWrite(relay2, HIGH);
+        lcd.print("done!");
         Serial.println("Stopped");  
         delay(4000);
+        lcd.clear();
     } else {
         digitalWrite(relay1, HIGH);
         digitalWrite(relay2, HIGH);
@@ -335,13 +348,18 @@ void loop()
     Serial.println("C");
     delay(2000);
 
+    lcd.clear();
+
     if (int(tdsValue) < 800) {
         digitalWrite(relay3, LOW);
         digitalWrite(relay4, HIGH);
+        lcd.print("adding nutrient ...");
         Serial.println("Rotating in CCW (add nutrient solution)");  
-        delay(2000);  
+        delay(2000);
+        lcd.clear();
         digitalWrite(relay3, HIGH);
         digitalWrite(relay4, HIGH);
+        lcd.print("done");
         Serial.println("Stopped");  
         delay(4000);
     } else {
@@ -354,8 +372,24 @@ void loop()
     Serial.println("===============");
     delay(2000);
 
+    if (tempCelsius > 30) {
+        analogWrite(PUMP_CONTROL_PIN, motorSpeed_two);
+        lcd.clear();
+        lcd.print("Increasing pump speed...");
+        Serial.println("Temperature is high. Setting speed to 255 for 10 seconds.");
+        delay(10000);
+        lcd.clear();
+        lcd.print("back to normal");
+        analogWrite(PUMP_CONTROL_PIN, motorSpeed_one);
+        delay(1000);
+    }
+
+    lcd.clear();
+
     sendHTTPSRequest(watervalue, tempCelsius, acidity, tdsValue, flowRate);
     delay(1000);
+
+    lcd.clear();
 }
 
 float measureAcidity()
@@ -385,6 +419,7 @@ void sendHTTPSRequest(int waterLevel, float temperature, float acidity, float td
     int tdsValueInt = int(tdsValue);
     int flowRateInt = int(flowRate);
 
+    lcd.print("Send HTTP ...");
     Serial.println("Sending HTTPS request...");
 
     auto readAndPrintResponse = [](unsigned long timeout) {
@@ -439,6 +474,9 @@ void sendHTTPSRequest(int waterLevel, float temperature, float acidity, float td
     readAndPrintResponse(8000);
 
     String httpResponse = gsmSerial.readStringUntil('\n');
+
+    lcd.clear();
+    lcd.print(httpResponse);
     Serial.println(httpResponse);
    
     if (httpResponse.indexOf("HTTPACTION:0,") != -1) {
