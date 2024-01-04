@@ -13,6 +13,11 @@ DallasTemperature tempSensor(&oneWire);
 
 const int PUMP_CONTROL_PIN = 3;
 
+int relay1 = 9;
+int relay2 = 11;
+int relay3 = 13;
+int relay4 = 12;
+
 SoftwareSerial gsmSerial(5, 6); // RX, TX
 
 #define POWER_PIN 7
@@ -134,6 +139,18 @@ int getMedianNum(int bArray[], int iFilterLen)
 
 void setup()
 {
+    pinMode(relay1, OUTPUT);
+    pinMode(relay2, OUTPUT);
+
+    digitalWrite(relay1, HIGH); 
+    digitalWrite(relay2, HIGH);
+
+    pinMode(relay3, OUTPUT);
+    pinMode(relay4, OUTPUT);
+
+    digitalWrite(relay3, HIGH); 
+    digitalWrite(relay4, HIGH);  
+
     Serial.begin(9600);
     gsmSerial.begin(9600);
 
@@ -222,6 +239,34 @@ void loop()
     lcd.print("Acidity (pH): ");
     lcd.print(acidity);
 
+    if (acidity > 7) {
+        digitalWrite(relay1, LOW);
+        digitalWrite(relay2, HIGH);
+        Serial.println("Rotating in CCW (add 2ml pH Down Solution)");  
+        delay(2000);  
+        digitalWrite(relay1, HIGH);
+        digitalWrite(relay2, HIGH);
+        Serial.println("Stopped");  
+        delay(4000);
+    } else if (acidity < 6) {
+        digitalWrite(relay1, LOW);
+        digitalWrite(relay2, HIGH);
+        Serial.println("Rotating in CCW (add 2ml pH Up Solution)");  
+        delay(2000);  
+        digitalWrite(relay1, HIGH);
+        digitalWrite(relay2, HIGH);
+        Serial.println("Stopped");  
+        delay(4000);
+    } else {
+        digitalWrite(relay1, HIGH);
+        digitalWrite(relay2, HIGH);
+        Serial.println("Stopped");  
+        delay(2000);
+    }
+
+    Serial.println("===============");
+    delay(2000);
+
     if ((millis() - oldTime) > 2000)
     {
         detachInterrupt(sensorInterrupt);
@@ -288,6 +333,25 @@ void loop()
     Serial.print("Temperature: ");
     Serial.print(tempCelsius);
     Serial.println("C");
+    delay(2000);
+
+    if (int(tdsValue) < 800) {
+        digitalWrite(relay3, LOW);
+        digitalWrite(relay4, HIGH);
+        Serial.println("Rotating in CCW (add nutrient solution)");  
+        delay(2000);  
+        digitalWrite(relay3, HIGH);
+        digitalWrite(relay4, HIGH);
+        Serial.println("Stopped");  
+        delay(4000);
+    } else {
+        digitalWrite(relay3, HIGH);
+        digitalWrite(relay4, HIGH);
+        Serial.println("Stopped");  
+        delay(2000);
+    }
+    
+    Serial.println("===============");
     delay(2000);
 
     sendHTTPSRequest(watervalue, tempCelsius, acidity, tdsValue, flowRate);
